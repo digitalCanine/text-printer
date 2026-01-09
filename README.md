@@ -2,7 +2,7 @@
 
 ---
 
-[Example](./assets/example.mp4)
+https://github.com/user-attachments/assets/013bc8b9-3552-49c4-8af0-fda04889034b
 
 A small terminal script that prints a user-defined phrase in brackets, flooding the screen line by line with smoothly shifting colors.
 
