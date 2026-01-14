@@ -71,13 +71,65 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-# Palette variables
-PALETTE_START=16
-PALETTE_END=231
-color=$PALETTE_START
-direction=1
-STEP=2
-i=0
+# Function to get RGB values from terminal color
+get_terminal_color() {
+  local color_num=$1
+  # Query the terminal for the color using OSC 4
+  printf "\033]4;%d;?\033\\" "$color_num"
+
+  # Read response with timeout
+  local response=""
+  IFS= read -t 0.1 -d '\' response 2>/dev/null || true
+
+  # Parse the response (format: rgb:RRRR/GGGG/BBBB)
+  if [[ $response =~ rgb:([0-9a-fA-F]+)/([0-9a-fA-F]+)/([0-9a-fA-F]+) ]]; then
+    # Convert from 16-bit hex to 8-bit decimal
+    local r=$((16#${BASH_REMATCH[1]:0:2}))
+    local g=$((16#${BASH_REMATCH[2]:0:2}))
+    local b=$((16#${BASH_REMATCH[3]:0:2}))
+    echo "$r $g $b"
+    return 0
+  fi
+
+  # Fallback colors if query fails
+  case $color_num in
+  0) echo "26 46 40" ;;     # color0 approximation
+  1) echo "200 52 30" ;;    # color1 approximation
+  2) echo "90 124 110" ;;   # color2 approximation
+  3) echo "212 165 116" ;;  # color3 approximation
+  4) echo "61 82 72" ;;     # color4 approximation
+  5) echo "184 127 79" ;;   # color5 approximation
+  6) echo "79 120 102" ;;   # color6 approximation
+  7) echo "245 230 211" ;;  # color7 approximation
+  8) echo "45 66 56" ;;     # color8 approximation
+  9) echo "233 79 55" ;;    # color9 approximation
+  10) echo "109 149 132" ;; # color10 approximation
+  11) echo "232 199 153" ;; # color11 approximation
+  12) echo "74 104 88" ;;   # color12 approximation
+  13) echo "212 165 116" ;; # color13 approximation
+  14) echo "104 152 129" ;; # color14 approximation
+  15) echo "253 248 240" ;; # color15 approximation
+  *) echo "128 128 128" ;;
+  esac
+}
+
+# Build gradient palette from terminal colors
+build_terminal_gradient() {
+  local -a colors
+  # Sample interesting colors from the terminal palette
+  # Use colors that typically have good variation: reds, greens, yellows, blues, magentas, cyans
+  local color_indices=(1 2 3 4 5 6 9 10 11 12 13 14)
+
+  for idx in "${color_indices[@]}"; do
+    read r g b <<<$(get_terminal_color $idx)
+    colors+=("$r,$g,$b")
+  done
+
+  # Return the color array
+  for color in "${colors[@]}"; do
+    echo "$color"
+  done
+}
 
 # Function to interpolate between two RGB colors
 interpolate_color() {
@@ -91,6 +143,19 @@ interpolate_color() {
 
   echo "$r $g $b"
 }
+
+# Build terminal color gradient if not using LGBT or rainbow mode
+if ! $LGBT_MODE && ! $RAINBOW; then
+  echo "Reading terminal colors..." >&2
+  mapfile -t TERMINAL_COLORS < <(build_terminal_gradient)
+  COLOR_COUNT=${#TERMINAL_COLORS[@]}
+  if ((COLOR_COUNT > 0)); then
+    FLAG_COLORS=("${TERMINAL_COLORS[@]}")
+    LGBT_MODE=true # Reuse LGBT gradient logic for terminal colors
+  fi
+fi
+
+i=0
 
 # Main loop
 while true; do
@@ -120,13 +185,18 @@ while true; do
     # Interpolate
     read r g b <<<$(interpolate_color $r1 $g1 $b1 $r2 $g2 $b2 $local_pos)
 
-    # Build a line without color codes first
+    # Build line with proper color
     line=""
-    while ((${#line} + TOKEN_LEN < cols)); do
-      line+="$TOKEN"
+    while ((${#line} < cols)); do
+      remaining=$((cols - ${#line}))
+      if ((remaining >= TOKEN_LEN)); then
+        line+="$TOKEN"
+      else
+        line+=$(printf "%${remaining}s" "")
+      fi
     done
 
-    # Print with color
+    # Print with RGB color
     printf "\e[38;2;%d;%d;%dm%s\e[0m\n" "$r" "$g" "$b" "$line"
   elif $RAINBOW; then
     # Rainbow sine wave
@@ -137,34 +207,19 @@ while true; do
       print r, g, b
     }')
 
-    # Build a line without color codes first
+    # Build line with proper color
     line=""
-    while ((${#line} + TOKEN_LEN < cols)); do
-      line+="$TOKEN"
+    while ((${#line} < cols)); do
+      remaining=$((cols - ${#line}))
+      if ((remaining >= TOKEN_LEN)); then
+        line+="$TOKEN"
+      else
+        line+=$(printf "%${remaining}s" "")
+      fi
     done
 
-    # Print with color
+    # Print with RGB color
     printf "\e[38;2;%d;%d;%dm%s\e[0m\n" "$r" "$g" "$b" "$line"
-  else
-    # 256-color ping-pong
-    # Build a line without color codes first
-    line=""
-    while ((${#line} + TOKEN_LEN < cols)); do
-      line+="$TOKEN"
-    done
-
-    # Print with color
-    printf "\e[38;5;%dm%s\e[0m\n" "$color" "$line"
-
-    # Advance color for next line
-    color=$((color + STEP * direction))
-    if ((color >= PALETTE_END)); then
-      color=$PALETTE_END
-      direction=-1
-    elif ((color <= PALETTE_START)); then
-      color=$PALETTE_START
-      direction=1
-    fi
   fi
 
   ((i++))
