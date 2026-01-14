@@ -11,9 +11,9 @@ A small terminal script that prints a user-defined phrase in brackets, flooding 
 The provided text is always rendered in the form `[ TEXT ]`:
 
 ```bash
-./watermark.sh "DC"
-./watermark.sh "digitalCanine"
-./watermark.sh "github"
+./printer.sh "DC"
+./printer.sh "digitalCanine"
+./printer.sh "github"
 ```
 
 When no string is provided, the printer will default to printing `DC`.
@@ -25,7 +25,7 @@ When no string is provided, the printer will default to printing `DC`.
 Automatically uses a smooth gradient through the terminal's 256-color palette:
 
 ```bash
-./watermark.sh "Your Text"
+./printer.sh "Your Text"
 ```
 
 ### Rainbow Mode
@@ -33,8 +33,8 @@ Automatically uses a smooth gradient through the terminal's 256-color palette:
 Full truecolor rainbow gradient:
 
 ```bash
-./watermark.sh -r "Your Text"
-./watermark.sh --rainbow "Your Text"
+./printer.sh -r "Your Text"
+./printer.sh --rainbow "Your Text"
 ```
 
 ### Pride Flag Mode
@@ -42,8 +42,8 @@ Full truecolor rainbow gradient:
 Display smooth gradients in pride flag colors:
 
 ```bash
-./watermark.sh --lgbt gay "Your Text"
-./watermark.sh --lgbt trans "Your Text"
+./printer.sh --lgbt gay "Your Text"
+./printer.sh --lgbt trans "Your Text"
 ```
 
 #### Available Flags
